@@ -28,6 +28,15 @@ In this first assignment, we will focus on:
 
     1. Complete the missing sections of the `load_tweets.py` file.
        This file is responsible for loading data into the normalized database.
+       The schema for the normalized database is summarized as:
+
+       <img src=twitter_schema.png />
+
+       The arrows represent foreign keys onto the primary key of the target table.
+       The foreign keys are likely to cause you many errors when inserting your data.
+       These errors may be frustrating,
+       but they are actually a GOOD thing (some would even say GREAT),
+       because Postgres is preventing you from accidentally adding corrupted data into the database.
 
     1. Complete the missing sections of the `load_tweets.sh` file.
        This file will both call the `load_tweets.py` file,
