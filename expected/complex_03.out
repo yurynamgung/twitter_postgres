@@ -1,0 +1,13 @@
+ country_code | count 
+--------------+-------
+ us           |     9
+ ca           |     2
+ gb           |     2
+ br           |     1
+ cl           |     1
+ de           |     1
+ fr           |     1
+ gr           |     1
+ mx           |     1
+(9 rows)
+
