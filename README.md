@@ -48,4 +48,24 @@ In this first assignment, we will focus on:
        then the output of the `SELECT` commands in each test case should be the same for each database.
        Each test case is worth 1 point per database, for 18 points total.
 
+    1. HINT:
+       As you debug your insert code, you may need to delete your database.
+       Calling
+       ```
+       $ docker-compose down
+       ```
+       is not enough, since the database is persisted to a volume.
+       To delete the database,
+       you'll need to use the
+       ```
+       $ docker volume ls
+       $ docker volume rm VOLUME_ID
+       ```
+       commands to list the docker volumes and delete the appropriate volumes.
+       Alternatively, you can use
+       ```
+       $ docker volume prune
+       ```
+       to delete all volumes.
+
 1. Upload a link to your forked github repo on sakai
