@@ -64,8 +64,6 @@ CREATE TABLE tweets (
     -- FOREIGN KEY (in_reply_to_status_id) REFERENCES tweets(id_tweets),
     -- FOREIGN KEY (quoted_status_id) REFERENCES tweets(id_tweets)
 );
-CREATE INDEX tweets_index_geo ON tweets USING gist(geo);
-CREATE INDEX tweets_index_withheldincountries ON tweets USING gin(withheld_in_countries);
 
 CREATE TABLE tweet_urls (
     id_tweets BIGINT,
@@ -83,7 +81,6 @@ CREATE TABLE tweet_mentions (
     FOREIGN KEY (id_tweets) REFERENCES tweets(id_tweets),
     FOREIGN KEY (id_users) REFERENCES users(id_users)
 );
-CREATE INDEX tweet_mentions_index ON tweet_mentions(id_users);
 
 CREATE TABLE tweet_tags (
     id_tweets BIGINT,
@@ -92,7 +89,6 @@ CREATE TABLE tweet_tags (
     FOREIGN KEY (id_tweets) REFERENCES tweets(id_tweets)
 );
 COMMENT ON TABLE tweet_tags IS 'This table links both hashtags and cashtags';
-CREATE INDEX tweet_tags_index ON tweet_tags(id_tweets);
 
 
 CREATE TABLE tweet_media (
