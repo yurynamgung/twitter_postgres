@@ -74,7 +74,6 @@ CREATE TABLE tweet_urls (
     FOREIGN KEY (id_tweets) REFERENCES tweets(id_tweets),
     FOREIGN KEY (id_urls) REFERENCES urls(id_urls)
 );
---CREATE UNIQUE INDEX tweet_urls_unique ON tweet_urls(id_tweets,id_urls);
 
 
 CREATE TABLE tweet_mentions (
@@ -85,7 +84,6 @@ CREATE TABLE tweet_mentions (
     FOREIGN KEY (id_users) REFERENCES users(id_users)
 );
 CREATE INDEX tweet_mentions_index ON tweet_mentions(id_users);
---CREATE UNIQUE INDEX tweet_mentions_unique ON tweet_mentions(id_users,id_tweets);
 
 CREATE TABLE tweet_tags (
     id_tweets BIGINT,
@@ -95,8 +93,6 @@ CREATE TABLE tweet_tags (
 );
 COMMENT ON TABLE tweet_tags IS 'This table links both hashtags and cashtags';
 CREATE INDEX tweet_tags_index ON tweet_tags(id_tweets);
---CREATE UNIQUE INDEX tweet_tags_unique ON tweet_tags(tag,id_tweets);
---CREATE INDEX tweet_tags_unique2 ON tweet_tags(lower(tag),id_tweets);
 
 
 CREATE TABLE tweet_media (
@@ -107,7 +103,6 @@ CREATE TABLE tweet_media (
     FOREIGN KEY (id_urls) REFERENCES urls(id_urls),
     FOREIGN KEY (id_tweets) REFERENCES tweets(id_tweets)
 );
---CREATE UNIQUE INDEX tweet_media_unique ON tweet_media(id_tweets,id_urls);
 
 /*
  * Precomputes the total number of occurrences for each hashtag
@@ -135,34 +130,5 @@ CREATE MATERIALIZED VIEW tweet_tags_cooccurrence AS (
     GROUP BY t1.tag, t2.tag
     ORDER BY total DESC
 );
-
-/*
-select table_name,constraint_name from information_schema.table_constraints where constraint_schema='public' and constraint_type='FOREIGN KEY';
-   table_name   |         constraint_name         
-----------------+---------------------------------
- users          | users_id_urls_fkey
- users          | users_id_urls_fkey1
- tweets         | tweets_id_users_fkey
- tweets         | tweets_in_reply_to_user_id_fkey
- tweet_urls     | tweet_urls_id_tweets_fkey
- tweet_urls     | tweet_urls_id_urls_fkey
- tweet_mentions | tweet_mentions_id_tweets_fkey
- tweet_mentions | tweet_mentions_id_users_fkey
- tweet_tags     | tweet_tags_id_tweets_fkey
- tweet_media    | tweet_media_id_urls_fkey
- tweet_media    | tweet_media_id_tweets_fkey
-*/
-
-ALTER TABLE users          DROP CONSTRAINT users_id_urls_fkey;
-ALTER TABLE users          DROP CONSTRAINT users_id_urls_fkey1;
-ALTER TABLE tweets         DROP CONSTRAINT tweets_id_users_fkey;
-ALTER TABLE tweets         DROP CONSTRAINT tweets_in_reply_to_user_id_fkey;
-ALTER TABLE tweet_urls     DROP CONSTRAINT tweet_urls_id_tweets_fkey;
-ALTER TABLE tweet_urls     DROP CONSTRAINT tweet_urls_id_urls_fkey;
-ALTER TABLE tweet_mentions DROP CONSTRAINT tweet_mentions_id_tweets_fkey;
-ALTER TABLE tweet_mentions DROP CONSTRAINT tweet_mentions_id_users_fkey;
-ALTER TABLE tweet_tags     DROP CONSTRAINT tweet_tags_id_tweets_fkey;
-ALTER TABLE tweet_media    DROP CONSTRAINT tweet_media_id_urls_fkey;
-ALTER TABLE tweet_media    DROP CONSTRAINT tweet_media_id_tweets_fkey;
 
 COMMIT;
