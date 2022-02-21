@@ -1,13 +1,5 @@
 #!/usr/bin/python3
 
-# process command line args
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('--db',required=True)
-parser.add_argument('--inputs',nargs='+',required=True)
-parser.add_argument('--print_every',type=int,default=1000)
-args = parser.parse_args()
-
 # imports
 import sqlalchemy
 import os
@@ -16,35 +8,43 @@ import zipfile
 import io
 import json
 
-# create database connection
-engine = sqlalchemy.create_engine(args.db, connect_args={
-    'application_name': 'load_tweets.py',
-    })
-connection = engine.connect()
-
 ################################################################################
 # helper functions
 ################################################################################
 
+
 def remove_nulls(s):
-    '''
-    Postgres doesn't support strings with the null character \x00 in them,
-    but twitter does.
+    r'''
+    Postgres doesn't support strings with the null character \x00 in them, but twitter does.
     This helper function replaces the null characters with an escaped version so that they can be loaded into postgres.
     Technically, this means the data in postgres won't be an exact match of the data in twitter,
-    because we are not also escaping the escaped strings.
-    The added complexity of a fully working escaping system doesn't seem worth the benefits since null characters appear so rarely in twitter text.
+    and there is no way to get the original twitter data back from the data in postgres.
+
+    The null character is extremely rarely used in real world text (approx. 1 in 1 billion tweets),
+    and so this isn't too big of a deal.
+    A more correct implementation, however, would be to *escape* the null characters rather than remove them.
+    This isn't hard to do in python, but it is a bit of a pain to do with the JSON/COPY commands for the denormalized data.
+    Since our goal is for the normalized/denormalized versions of the data to match exactly,
+    we're not going to escape the strings for the normalized data.
+
+    >>> remove_nulls('\x00')
+    ''
+    >>> remove_nulls('hello\x00 world')
+    'hello world'
     '''
     if s is None:
         return None
     else:
-        return s.replace('\x00','\\x00')
+        return s.replace('\x00','')
 
 
-def get_id_urls(url):
+def get_id_urls(url, connection):
     '''
-    Given a url, returns the corresponding id in the urls table.
+    Given a url, return the corresponding id in the urls table.
     If no row exists for the url, then one is inserted automatically.
+
+    NOTE:
+    This function cannot be tested with standard python testing tools because it interacts with the db.
     '''
     sql = sqlalchemy.sql.text('''
     insert into urls 
@@ -56,6 +56,10 @@ def get_id_urls(url):
     ;
     ''')
     res = connection.execute(sql,{'url':url}).first()
+
+    # when no conflict occurs, then the query above inserts a new row in the url table and returns id_urls in res[0];
+    # when a conflict occurs, then the query above does not insert or return anything;
+    # we need to run a select statement to put the already existing id_urls into res[0]
     if res is None:
         sql = sqlalchemy.sql.text('''
         select id_urls 
@@ -64,21 +68,25 @@ def get_id_urls(url):
             url=:url
         ''')
         res = connection.execute(sql,{'url':url}).first()
+
     id_urls = res[0]
     return id_urls
 
 
-################################################################################
-# main functions
-################################################################################
-
 def insert_tweet(connection,tweet):
     '''
-    Inserts the tweet into the database.
+    Insert the tweet into the database.
 
     Args:
         connection: a sqlalchemy connection to the postgresql db
         tweet: a dictionary representing the json tweet object
+
+    NOTE:
+    This function cannot be tested with standard python testing tools because it interacts with the db.
+    
+    FIXME:
+    This function is only partially implemented.
+    You'll need to add appropriate SQL insert statements to get it to work.
     '''
 
     # skip tweet if it's already inserted
@@ -103,7 +111,7 @@ def insert_tweet(connection,tweet):
         if tweet['user']['url'] is None:
             user_id_urls = None
         else:
-            user_id_urls = get_id_urls(tweet['user']['url'])
+            user_id_urls = get_id_urls(tweet['user']['url'], connection)
 
         # create/update the user
         sql = sqlalchemy.sql.text('''
@@ -181,7 +189,7 @@ def insert_tweet(connection,tweet):
             urls = tweet['entities']['urls']
 
         for url in urls:
-            id_urls = get_id_urls(url['expanded_url'])
+            id_urls = get_id_urls(url['expanded_url'], connection)
 
             sql=sqlalchemy.sql.text('''
                 ''')
@@ -240,26 +248,45 @@ def insert_tweet(connection,tweet):
                 media = []
 
         for medium in media:
-            id_urls = get_id_urls(medium['media_url'])
+            id_urls = get_id_urls(medium['media_url'], connection)
             sql=sqlalchemy.sql.text('''
                 ''')
 
+################################################################################
+# main functions
+################################################################################
 
-# loop through the input file
-# NOTE:
-# we reverse sort the filenames because this results in fewer updates to the users table,
-# which prevents excessive dead tuples and autovacuums
-for filename in sorted(args.inputs, reverse=True):
-    with zipfile.ZipFile(filename, 'r') as archive: 
-        print(datetime.datetime.now(),filename)
-        for subfilename in sorted(archive.namelist(), reverse=True):
-            with io.TextIOWrapper(archive.open(subfilename)) as f:
-                for i,line in enumerate(f):
+if __name__ == '__main__':
+    
+    # process command line args
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db',required=True)
+    parser.add_argument('--inputs',nargs='+',required=True)
+    parser.add_argument('--print_every',type=int,default=1000)
+    args = parser.parse_args()
 
-                    # load and insert the tweet
-                    tweet = json.loads(line)
-                    insert_tweet(connection,tweet)
+    # create database connection
+    engine = sqlalchemy.create_engine(args.db, connect_args={
+        'application_name': 'load_tweets.py',
+        })
+    connection = engine.connect()
 
-                    # print message
-                    if i%args.print_every==0:
-                        print(datetime.datetime.now(),filename,subfilename,'i=',i,'id=',tweet['id'])
+    # loop through the input file
+    # NOTE:
+    # we reverse sort the filenames because this results in fewer updates to the users table,
+    # which prevents excessive dead tuples and autovacuums
+    for filename in sorted(args.inputs, reverse=True):
+        with zipfile.ZipFile(filename, 'r') as archive: 
+            print(datetime.datetime.now(),filename)
+            for subfilename in sorted(archive.namelist(), reverse=True):
+                with io.TextIOWrapper(archive.open(subfilename)) as f:
+                    for i,line in enumerate(f):
+
+                        # load and insert the tweet
+                        tweet = json.loads(line)
+                        insert_tweet(connection,tweet)
+
+                        # print message
+                        if i%args.print_every==0:
+                            print(datetime.datetime.now(),filename,subfilename,'i=',i,'id=',tweet['id'])

@@ -9,7 +9,7 @@ it will be spread out over several assignments.
 In this first assignment, we will focus on:
 1. working with postgres from python
 1. inserting data into the database
-1. understanding denormalized vs normalized schemas (i.e. NoSQL vs SQL)
+1. understanding JSON/denormalized vs normalized schemas (i.e. NoSQL vs SQL)
 
 ## Tasks
 
@@ -25,6 +25,15 @@ In this first assignment, we will focus on:
     1. There are two postgres containers defined in the `docker-compose.yml` file ports:
        one containes a normalized database schema, and the other is denormalized.
        You will need to update the ports for each database so that they do not conflict with anyone else.
+
+       > **NOTE:**
+       > Recall that in the pagila assignments, there was no need to adjust the ports.
+       > This is because the database was not exposed to the lambda server.
+       > In this assignment, we must expose the database to the lambda server.
+       > The `load_tweets.sh` and `load_tweets.py` scripts will be run from the lambda server.
+       >
+       > It would be possible to put these scripts "inside" the database image so that we wouldn't need to expose the ports.
+       > But I've put the scripts "outside" the container to give you more practice connecting to the db from a remote system.
 
     1. Complete the missing sections of the `load_tweets.py` file.
        This file is responsible for loading data into the normalized database.
